@@ -37,11 +37,17 @@ func (r NormalizedRequest) ToCodexWSCreatePayload() map[string]any {
 	if r.PromptCacheKey != "" {
 		payload["prompt_cache_key"] = r.PromptCacheKey
 	}
+	if r.PromptCacheOptions != nil {
+		payload["prompt_cache_options"] = r.PromptCacheOptions
+	}
 	if len(r.Include) > 0 {
 		payload["include"] = append([]string(nil), r.Include...)
 	}
 	if r.ParallelToolCalls != nil {
 		payload["parallel_tool_calls"] = *r.ParallelToolCalls
+	}
+	if len(r.ContextManagement) > 0 {
+		payload["context_management"] = append([]ContextManagement(nil), r.ContextManagement...)
 	}
 	if r.Generate != nil {
 		payload["generate"] = *r.Generate

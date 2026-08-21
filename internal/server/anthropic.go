@@ -40,6 +40,7 @@ func (a *App) handleAnthropicCountTokens(c *gin.Context) {
 		a.respondAnthropicNormalizeError(c, err)
 		return
 	}
+	normalized = a.optimizeRequest(c, "anthropic_count_tokens", normalized)
 	count, err := anthropic.CountInputTokens(normalized)
 	if err != nil {
 		a.writeAnthropicError(c, http.StatusInternalServerError, err.Error())
@@ -64,6 +65,7 @@ func (a *App) handleAnthropicMessages(c *gin.Context) {
 		a.respondAnthropicNormalizeError(c, err)
 		return
 	}
+	normalized = a.optimizeRequest(c, "anthropic_messages", normalized)
 
 	resolution := sessionResolution{
 		Request:            normalized,

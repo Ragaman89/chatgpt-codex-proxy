@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"chatgpt-codex-proxy/internal/codex"
+	"chatgpt-codex-proxy/internal/models"
 	"chatgpt-codex-proxy/internal/turn"
 )
 
@@ -1340,6 +1341,52 @@ func TestToCodexWSCreatePayloadIncludesTurnControls(t *testing.T) {
 	payload := request.ToCodexWSCreatePayload()
 	if payload["generate"] != false || payload["parallel_tool_calls"] != false {
 		t.Fatalf("payload = %#v", payload)
+	}
+}
+
+func TestResponsesPreservesPromptCachingControls(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := Responses(ResponsesRequest{
+		Model:          "gpt-5.4",
+		Input:          ResponsesInput{String: "hello"},
+		PromptCacheKey: " stable-key ",
+		PromptCacheOptions: &turn.PromptCacheOptions{
+			Mode: " explicit ",
+			TTL:  " 30m ",
+		},
+	}, models.NewCatalog(models.BootstrapEntries()))
+	if err != nil {
+		t.Fatalf("Responses() error = %v", err)
+	}
+	if normalized.PromptCacheKey != "stable-key" {
+		t.Fatalf("PromptCacheKey = %q, want stable-key", normalized.PromptCacheKey)
+	}
+	if normalized.PromptCacheOptions == nil || normalized.PromptCacheOptions.Mode != "explicit" || normalized.PromptCacheOptions.TTL != "30m" {
+		t.Fatalf("PromptCacheOptions = %#v", normalized.PromptCacheOptions)
+	}
+}
+
+func TestResponsesPreservesExplicitCacheBreakpoint(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := Responses(ResponsesRequest{
+		Model: "gpt-5.4",
+		Input: ResponsesInput{Items: []ResponsesInputItem{{
+			Role: "user",
+			Content: MessageContent{{
+				Type:                  "input_text",
+				Text:                  "stable prefix",
+				PromptCacheBreakpoint: &turn.PromptCacheBreakpoint{Mode: " explicit "},
+			}},
+		}}},
+	}, models.NewCatalog(models.BootstrapEntries()))
+	if err != nil {
+		t.Fatalf("Responses() error = %v", err)
+	}
+	breakpoint := normalized.Input[0].Content[0].PromptCacheBreakpoint
+	if breakpoint == nil || breakpoint.Mode != "explicit" {
+		t.Fatalf("PromptCacheBreakpoint = %#v", breakpoint)
 	}
 }
 

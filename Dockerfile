@@ -7,7 +7,7 @@ WORKDIR /src
 
 RUN apk add --no-cache ca-certificates git
 
-ARG GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=${GOPROXY}
 
 COPY go.mod go.sum ./
@@ -18,26 +18,15 @@ COPY internal ./internal
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/chatgpt-codex-proxy ./cmd/api
 
-FROM alpine:3.23
+FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
-
-RUN apk add --no-cache ca-certificates && \
-    addgroup -S app && \
-    adduser -S -G app -h /app app && \
-    mkdir -p /app/data && \
-    chown -R app:app /app
 
 COPY --from=build /out/chatgpt-codex-proxy /usr/local/bin/chatgpt-codex-proxy
 
 ENV PORT=8080
-ENV DATA_DIR=/app/data
+ENV DATA_DIR=/data
 ENV GIN_MODE=release
 
 EXPOSE 8080
-VOLUME ["/app/data"]
-USER app
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O - "http://127.0.0.1:${PORT}/health/live" >/dev/null || exit 1
-
-ENTRYPOINT ["chatgpt-codex-proxy"]
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/chatgpt-codex-proxy"]

@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
+
+ARG MODEL_REPOSITORY=microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank
+ARG MODEL_REVISION=5f0c82792b7ea14c6484e015b6a072009496b7f2
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/models/cache \
+    HF_HUB_DISABLE_TELEMETRY=1 \
+    MODEL_NAME=/models/llmlingua-2-bert-base-multilingual-cased-meetingbank \
+    PORT=8090
+
+WORKDIR /app
+
+COPY compressor/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Hugging Face occasionally throttles anonymous downloads. Keep the expensive
+# Python dependency layer reusable and retry only the immutable model fetch.
+RUN for attempt in 1 2 3 4 5; do \
+      python -c "from huggingface_hub import snapshot_download; snapshot_download('${MODEL_REPOSITORY}', revision='${MODEL_REVISION}', local_dir='/models/llmlingua-2-bert-base-multilingual-cased-meetingbank')" && break; \
+      if [ "$attempt" = 5 ]; then exit 1; fi; \
+      sleep $((attempt * 10)); \
+    done && \
+    find /models -type f -exec chmod 0444 {} + && \
+    find /models -type d -exec chmod 0555 {} + && \
+    rm -rf /root/.cache /tmp/*
+
+COPY --chown=65532:65532 compressor /app/compressor
+
+USER 65532:65532
+EXPOSE 8090
+ENTRYPOINT ["python", "-m", "compressor.app"]

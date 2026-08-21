@@ -15,6 +15,7 @@ type ChatCompletionsRequest struct {
 	ServiceTier        string                     `json:"service_tier,omitempty"`
 	PreviousResponseID string                     `json:"previous_response_id,omitempty"`
 	PromptCacheKey     string                     `json:"prompt_cache_key,omitempty"`
+	PromptCacheOptions *turn.PromptCacheOptions   `json:"prompt_cache_options,omitempty"`
 	Tools              []ToolDefinition           `json:"tools,omitempty"`
 	ToolChoice         json.RawMessage            `json:"tool_choice,omitempty"`
 	ParallelToolCalls  *bool                      `json:"parallel_tool_calls,omitempty"`
@@ -22,6 +23,7 @@ type ChatCompletionsRequest struct {
 	Text               *ResponsesText             `json:"text,omitempty"`
 	Functions          []LegacyFunctionDefinition `json:"functions,omitempty"`
 	FunctionCall       *LegacyFunctionCallChoice  `json:"function_call,omitempty"`
+	ContextManagement  []turn.ContextManagement   `json:"context_management,omitempty"`
 }
 
 type ChatMessage struct {
@@ -94,15 +96,16 @@ func (m *MessageContent) UnmarshalJSON(data []byte) error {
 }
 
 type ContentPart struct {
-	Type     string         `json:"type"`
-	Text     string         `json:"text,omitempty"`
-	ImageURL *ImageURLValue `json:"image_url,omitempty"`
-	File     *FileValue     `json:"file,omitempty"`
-	Detail   string         `json:"detail,omitempty"`
-	FileURL  string         `json:"file_url,omitempty"`
-	FileData string         `json:"file_data,omitempty"`
-	FileID   string         `json:"file_id,omitempty"`
-	Filename string         `json:"filename,omitempty"`
+	Type                  string                      `json:"type"`
+	Text                  string                      `json:"text,omitempty"`
+	ImageURL              *ImageURLValue              `json:"image_url,omitempty"`
+	File                  *FileValue                  `json:"file,omitempty"`
+	Detail                string                      `json:"detail,omitempty"`
+	FileURL               string                      `json:"file_url,omitempty"`
+	FileData              string                      `json:"file_data,omitempty"`
+	FileID                string                      `json:"file_id,omitempty"`
+	Filename              string                      `json:"filename,omitempty"`
+	PromptCacheBreakpoint *turn.PromptCacheBreakpoint `json:"prompt_cache_breakpoint,omitempty"`
 }
 
 type ImageURLValue struct {
@@ -157,27 +160,31 @@ type JSONSchemaSpec struct {
 }
 
 type ResponsesRequest struct {
-	Model              string           `json:"model"`
-	Input              ResponsesInput   `json:"input"`
-	Instructions       string           `json:"instructions,omitempty"`
-	Stream             bool             `json:"stream"`
-	Tools              []ToolDefinition `json:"tools,omitempty"`
-	ToolChoice         json.RawMessage  `json:"tool_choice,omitempty"`
-	ParallelToolCalls  *bool            `json:"parallel_tool_calls,omitempty"`
-	PreviousResponseID string           `json:"previous_response_id,omitempty"`
-	PromptCacheKey     string           `json:"prompt_cache_key,omitempty"`
-	ServiceTier        string           `json:"service_tier,omitempty"`
-	Text               *ResponsesText   `json:"text,omitempty"`
-	Reasoning          *Reasoning       `json:"reasoning,omitempty"`
+	Model              string                   `json:"model"`
+	Input              ResponsesInput           `json:"input"`
+	Instructions       string                   `json:"instructions,omitempty"`
+	Stream             bool                     `json:"stream"`
+	Tools              []ToolDefinition         `json:"tools,omitempty"`
+	ToolChoice         json.RawMessage          `json:"tool_choice,omitempty"`
+	ParallelToolCalls  *bool                    `json:"parallel_tool_calls,omitempty"`
+	PreviousResponseID string                   `json:"previous_response_id,omitempty"`
+	PromptCacheKey     string                   `json:"prompt_cache_key,omitempty"`
+	PromptCacheOptions *turn.PromptCacheOptions `json:"prompt_cache_options,omitempty"`
+	ServiceTier        string                   `json:"service_tier,omitempty"`
+	Text               *ResponsesText           `json:"text,omitempty"`
+	Reasoning          *Reasoning               `json:"reasoning,omitempty"`
+	ContextManagement  []turn.ContextManagement `json:"context_management,omitempty"`
 }
 
 type ResponsesCompactRequest struct {
-	Model              string         `json:"model"`
-	Input              ResponsesInput `json:"input"`
-	Instructions       string         `json:"instructions,omitempty"`
-	PreviousResponseID string         `json:"previous_response_id,omitempty"`
-	Text               *ResponsesText `json:"text,omitempty"`
-	Reasoning          *Reasoning     `json:"reasoning,omitempty"`
+	Model              string                   `json:"model"`
+	Input              ResponsesInput           `json:"input"`
+	Instructions       string                   `json:"instructions,omitempty"`
+	PreviousResponseID string                   `json:"previous_response_id,omitempty"`
+	Text               *ResponsesText           `json:"text,omitempty"`
+	Reasoning          *Reasoning               `json:"reasoning,omitempty"`
+	PromptCacheKey     string                   `json:"prompt_cache_key,omitempty"`
+	PromptCacheOptions *turn.PromptCacheOptions `json:"prompt_cache_options,omitempty"`
 }
 
 type Reasoning = turn.Reasoning

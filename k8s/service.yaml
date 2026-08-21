@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: codex-proxy
+  namespace: codex-proxy
+spec:
+  selector:
+    app.kubernetes.io/name: codex-proxy
+    app.kubernetes.io/component: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llmlingua-compressor
+  namespace: codex-proxy
+spec:
+  selector:
+    app.kubernetes.io/name: llmlingua-compressor
+    app.kubernetes.io/component: compressor
+  ports:
+    - name: http
+      port: 8090
+      targetPort: http

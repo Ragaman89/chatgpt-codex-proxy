@@ -32,6 +32,33 @@ Built for local and small-scale use.
 - **Multi-account rotation** — least-used, round-robin, or sticky, with cooldowns and quota awareness.
 - **Device login** — add an account by opening a URL. No cookie scraping, no pasted tokens.
 - **Tools and structured output** — custom tools, legacy `functions`, `json_schema`, `json_object`.
+- **Layered token efficiency** — native prompt caching and continuations, server compaction, exact compression-result caching, and optional LLMLingua-2 compression for safe historical prose.
+
+## Token efficiency
+
+This fork adds a fail-open optimization stage before account selection. It uses
+the cheapest and least invasive mechanism first:
+
+1. preserve client `prompt_cache_key`, `prompt_cache_options`, and explicit
+   content cache breakpoints;
+2. derive a stable cache key when the client omits one;
+3. reuse `previous_response_id` when a replay prefix is known;
+4. request native server compaction through `context_management` and expose
+   `POST /v1/responses/compact`;
+5. compress only sufficiently large historical user/assistant prose with the
+   optional LLMLingua-2 service;
+6. cache exact compression results in a bounded, in-memory LRU.
+
+System/developer instructions, the current user request, tool definitions,
+tool calls/results, JSON, fenced code, files, images, reasoning state, and
+explicit prompt-cache breakpoints are never compressed. If the compressor is
+stopped with the temporary node, requests continue unchanged and may still use
+native caching and compaction. Responses include diagnostic headers such as
+`X-Token-Optimization` and `X-Optimized-Input-Tokens`; prompt text is not logged
+or persisted by the optimizer.
+
+See [docs/TOKEN_EFFICIENCY.md](docs/TOKEN_EFFICIENCY.md) for the architecture,
+trade-offs, and configuration.
 
 ## Quick Start
 
@@ -128,7 +155,7 @@ keeps it active behind a 60-second cooldown.
 
 Details: [docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md](docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md).
 
-## Deployment
+## Local deployment
 
 `compose.yaml` persists state in the `chatgpt-codex-proxy-data` volume and runs
 with basic hardening. `Dockerfile` builds the API server alone.
@@ -144,6 +171,49 @@ Config is environment-only: `PROXY_API_KEY` (required), `PORT` (`8080`),
 `${DATA_DIR}` holds `accounts.json` — accounts, OAuth tokens, labels, status,
 quota, cooldowns — and `models-cache.json`. Continuation state and in-flight
 device logins are memory-only and do not survive a restart.
+
+Run the learned compressor locally only when needed:
+
+```bash
+docker build -f Dockerfile.compressor -t codex-compressor:dev .
+docker run --rm -p 8090:8090 codex-compressor:dev
+
+TOKEN_OPTIMIZATION_ENABLED=true \
+TOKEN_COMPRESSOR_URL=http://127.0.0.1:8090 \
+PROXY_API_KEY=change-me-to-a-long-random-string \
+go run ./cmd/api
+```
+
+## Kubernetes deployment
+
+The manifests in `k8s/` deploy the gateway on an always-on arm64 node and the
+LLMLingua compressor on the temporary amd64 node. Gateway state uses a
+`longhorn-wffc` PVC. Both workloads run non-root with a read-only root
+filesystem, dropped capabilities, probes, resource limits, and default-deny
+NetworkPolicies. Traefik exposes only `https://codex-api.laegerfeld.de` and the
+`web` entry point redirects to `websecure`.
+
+```bash
+kubectl -n codex-proxy create secret generic codex-proxy \
+  --from-literal=proxy-api-key="$(openssl rand -hex 32)"
+kubectl apply -k k8s/
+```
+
+Copy `k8s/secret.example.yaml` only as a field reference; never commit the
+actual key. Replace the immutable image tags in `k8s/deployment.yaml` with the
+commit SHA published by CI before applying. Then perform device login using the
+admin endpoints shown above.
+
+This machine API intentionally uses its bearer API key instead of an interactive
+Authelia forward-auth flow, because OpenAI SDKs cannot complete browser login.
+The hostname is internal-only. No database is required, so CNPG variables and
+migrations do not apply. OAuth account data resides only on the encrypted
+Longhorn-backed volume.
+
+Rollback is an image-tag change followed by `kubectl rollout undo deployment/codex-proxy
+-n codex-proxy`. Disabling `TOKEN_OPTIMIZATION_ENABLED` rolls back only the new
+optimization stage without affecting API compatibility. Deleting the compressor
+Deployment is also safe because compression is fail-open.
 
 ## How It Works
 
@@ -178,10 +248,13 @@ chatgpt-codex-proxy/
 │   ├── accountmanager/       # rotation, cooldowns, quota routing
 │   ├── devicelogin/          # device-auth onboarding
 │   ├── conversation/         # continuation state and affinity
+│   ├── tokenopt/             # safe selection, token counting, cache, client
 │   ├── models/               # runtime model catalog
 │   ├── admin/ middleware/    # admin API and auth
 │   └── store/ config/        # persistence and configuration
 ├── test/integration/         # live compatibility suite
+├── compressor/               # isolated LLMLingua-2 CPU service
+├── k8s/                      # hardened k3s deployment
 └── docs/                     # upstream and translation references
 ```
 
@@ -189,6 +262,9 @@ chatgpt-codex-proxy/
 
 ```bash
 go test ./...
+python3 -m unittest compressor.test_service
+python3 -m compileall -q compressor
+kubectl kustomize k8s >/dev/null
 ```
 
 Live tests, against a proxy you already have running:
@@ -206,10 +282,16 @@ go test -tags=live ./test/integration -v -count=1
 - [docs/ANTHROPIC.md](docs/ANTHROPIC.md) — Anthropic mapping, streaming, token counting, limits
 - [docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md](docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md) — account selection and quota routing
 - [docs/CODEX_API_DOCS.md](docs/CODEX_API_DOCS.md) — private upstream behavior, inferred from this codebase
+- [docs/TOKEN_EFFICIENCY.md](docs/TOKEN_EFFICIENCY.md) — layered token optimization and operational guidance
 
 ## Limitations
 
 - Upstream is private and may change without notice.
 - Device auth is the only onboarding flow.
 - Continuation state is in memory and expires with its TTL.
+- Learned compression is lossy. The strict eligibility policy lowers risk but
+  cannot prove semantic equivalence; keep it disabled for prompts where exact
+  historical wording is legally or operationally significant.
+- The multilingual LLMLingua model image is large and CPU-intensive; the
+  gateway remains operational when that temporary-node workload is absent.
 - Deliberately small; it does not chase every edge of the public OpenAI platform.

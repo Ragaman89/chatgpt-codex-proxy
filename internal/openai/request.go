@@ -54,7 +54,9 @@ func ChatCompletions(req ChatCompletionsRequest, catalog *models.Catalog) (turn.
 		req.PreviousResponseID,
 	)
 	out.PromptCacheKey = strings.TrimSpace(req.PromptCacheKey)
+	out.PromptCacheOptions = clonePromptCacheOptions(req.PromptCacheOptions)
 	out.ParallelToolCalls = req.ParallelToolCalls
+	out.ContextManagement = append([]turn.ContextManagement(nil), req.ContextManagement...)
 	out.ToolNameAliases = toolNames.Aliases()
 	if req.ResponseFormat != nil {
 		text, tupleSchema, err := normalizeChatResponseFormat(req.ResponseFormat)
@@ -148,7 +150,9 @@ func Responses(req ResponsesRequest, catalog *models.Catalog) (turn.NormalizedRe
 	out.Input = turn.PrependDeveloperInstructions(payload.Input, payload.Instructions)
 	out.Text = payload.Text
 	out.PromptCacheKey = strings.TrimSpace(req.PromptCacheKey)
+	out.PromptCacheOptions = clonePromptCacheOptions(req.PromptCacheOptions)
 	out.ParallelToolCalls = req.ParallelToolCalls
+	out.ContextManagement = append([]turn.ContextManagement(nil), req.ContextManagement...)
 	out.TupleSchema = payload.TupleSchema
 	out.ToolNameAliases = toolNames.Aliases()
 	return out, nil
@@ -170,16 +174,28 @@ func Compact(req ResponsesCompactRequest, catalog *models.Catalog) (turn.Normali
 		ModelExplicit:      modelExplicit,
 		PreviousResponseID: strings.TrimSpace(req.PreviousResponseID),
 		CompactRequest: codex.CompactRequest{
-			Model:        model,
-			Instructions: payload.Instructions,
-			Input:        payload.Input,
-			Text:         payload.Text,
-			Reasoning:    reasoning,
+			Model:              model,
+			Instructions:       payload.Instructions,
+			Input:              payload.Input,
+			Text:               payload.Text,
+			Reasoning:          reasoning,
+			PromptCacheKey:     strings.TrimSpace(req.PromptCacheKey),
+			PromptCacheOptions: clonePromptCacheOptions(req.PromptCacheOptions),
 		},
 		TupleSchema:     payload.TupleSchema,
 		ToolNameAliases: toolNames.Aliases(),
 	}
 	return out, nil
+}
+
+func clonePromptCacheOptions(value *turn.PromptCacheOptions) *turn.PromptCacheOptions {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	copy.Mode = strings.TrimSpace(copy.Mode)
+	copy.TTL = strings.TrimSpace(copy.TTL)
+	return &copy
 }
 
 type normalizedResponsesPayload struct {
@@ -457,8 +473,9 @@ func normalizeContentPartsChecked(parts MessageContent) ([]codex.ContentPart, er
 		switch kind {
 		case contentPartText:
 			out = append(out, codex.ContentPart{
-				Type: contentType,
-				Text: part.Text,
+				Type:                  contentType,
+				Text:                  part.Text,
+				PromptCacheBreakpoint: clonePromptCacheBreakpoint(part.PromptCacheBreakpoint),
 			})
 		case contentPartImage:
 			if part.ImageURL == nil || strings.TrimSpace(part.ImageURL.URL) == "" && strings.TrimSpace(part.ImageURL.FileID) == "" {
@@ -495,6 +512,15 @@ func normalizeContentPartsChecked(parts MessageContent) ([]codex.ContentPart, er
 		}
 	}
 	return out, nil
+}
+
+func clonePromptCacheBreakpoint(value *turn.PromptCacheBreakpoint) *turn.PromptCacheBreakpoint {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	copy.Mode = strings.TrimSpace(copy.Mode)
+	return &copy
 }
 
 func flattenContent(content MessageContent) (string, error) {

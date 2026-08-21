@@ -13,6 +13,14 @@ func continuationInputHistory(accumulator *turn.Accumulator) []turn.InputItem {
 		history = append(history, cloneContinuationInputItem(item))
 	}
 	history = append(history, continuationOutputHistory(accumulator)...)
+	// A compaction item cryptographically represents everything before it.
+	// Keeping the expanded prefix would defeat compaction and can overflow the
+	// context during an HTTP replay after a WebSocket continuation failure.
+	for index := len(history) - 1; index >= 0; index-- {
+		if history[index].Type == "compaction" && history[index].EncryptedContent != "" {
+			return cloneContinuationInputItems(history[index:])
+		}
+	}
 	return history
 }
 
