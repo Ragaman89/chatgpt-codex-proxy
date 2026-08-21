@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-      - "feat/**"
-      - "fix/**"
-      - "chore/**"
 
 permissions:
   contents: read
