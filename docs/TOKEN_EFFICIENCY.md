@@ -37,6 +37,7 @@ Native facilities remain preferable to lossy compression:
 The sidecar API accepts only a batch of text and a target ratio. It loads the
 revision-pinned multilingual LLMLingua-2 BERT model from the image and performs
 CPU inference serially. Neither service logs request content.
+The image also preloads the `cl100k_base` Tiktoken vocabulary into `/models/tiktoken`; runtime startup therefore performs no external model or tokenizer downloads.
 
 The gateway considers only natural-language text in user or assistant messages
 strictly before the latest user message. It excludes:
