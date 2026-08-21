@@ -898,6 +898,29 @@ func TestContinuationInputHistoryIncludesReasoningReplay(t *testing.T) {
 	}
 }
 
+func TestContinuationInputHistoryDropsPrefixRepresentedByCompaction(t *testing.T) {
+	t.Parallel()
+
+	accumulator := turn.NewAccumulator(turn.NormalizedRequest{Request: codex.Request{
+		Input: []codex.InputItem{userText("a very long conversation prefix")},
+	}})
+	accumulator.Apply(&codex.StreamEvent{
+		Type: "response.completed",
+		Raw: map[string]any{"response": map[string]any{
+			"id": "resp_compacted",
+			"output": []any{
+				map[string]any{"type": "message", "role": "assistant", "content": []any{map[string]any{"type": "output_text", "text": "answer"}}},
+				map[string]any{"type": "compaction", "id": "cmp_1", "encrypted_content": "encrypted-compaction"},
+			},
+		}},
+	})
+
+	history := continuationInputHistory(accumulator)
+	if len(history) != 1 || history[0].Type != "compaction" || history[0].EncryptedContent != "encrypted-compaction" {
+		t.Fatalf("history = %#v, want only the latest compaction item", history)
+	}
+}
+
 func TestContinuationInputHistoryKeepsShortToolNameForUpstreamReplay(t *testing.T) {
 	t.Parallel()
 

@@ -111,6 +111,7 @@ func (a *App) handlePublicRequest(
 		a.respondOpenAINormalizeError(c, err)
 		return
 	}
+	normalized = a.optimizeRequest(c, endpoint, normalized)
 
 	opened, ok := a.resolveAndOpenRequest(c, endpoint, normalized)
 	if !ok {

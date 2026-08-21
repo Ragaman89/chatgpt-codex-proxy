@@ -10,15 +10,18 @@ import (
 )
 
 type healthResponse struct {
-	Status          string                    `json:"status"`
-	Accounts        int                       `json:"accounts,omitempty"`
-	Rotation        accounts.RotationStrategy `json:"rotation,omitempty"`
-	Continuations   bool                      `json:"continuations,omitempty"`
-	DefaultModel    string                    `json:"default_model,omitempty"`
-	CodexBaseURL    string                    `json:"codex_base_url,omitempty"`
-	RequestTimeout  string                    `json:"request_timeout,omitempty"`
-	ContinuationTTL string                    `json:"continuation_ttl,omitempty"`
-	Error           string                    `json:"error,omitempty"`
+	Status               string                    `json:"status"`
+	Accounts             int                       `json:"accounts,omitempty"`
+	Rotation             accounts.RotationStrategy `json:"rotation,omitempty"`
+	Continuations        bool                      `json:"continuations,omitempty"`
+	DefaultModel         string                    `json:"default_model,omitempty"`
+	CodexBaseURL         string                    `json:"codex_base_url,omitempty"`
+	RequestTimeout       string                    `json:"request_timeout,omitempty"`
+	ContinuationTTL      string                    `json:"continuation_ttl,omitempty"`
+	TokenOptimization    bool                      `json:"token_optimization"`
+	CompressorConfigured bool                      `json:"compressor_configured"`
+	AutoCompactThreshold int                       `json:"auto_compact_threshold,omitempty"`
+	Error                string                    `json:"error,omitempty"`
 }
 
 func (a *App) handleHealthLive(c *gin.Context) {
@@ -36,13 +39,16 @@ func (a *App) handleHealth(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, healthResponse{
-		Status:          "ok",
-		Accounts:        len(records),
-		Rotation:        a.accounts.RotationStrategy(),
-		Continuations:   true,
-		DefaultModel:    a.cfg.DefaultModel,
-		CodexBaseURL:    a.cfg.CodexBaseURL,
-		RequestTimeout:  a.cfg.RequestTimeout.String(),
-		ContinuationTTL: a.cfg.ContinuationTTL.String(),
+		Status:               "ok",
+		Accounts:             len(records),
+		Rotation:             a.accounts.RotationStrategy(),
+		Continuations:        true,
+		DefaultModel:         a.cfg.DefaultModel,
+		CodexBaseURL:         a.cfg.CodexBaseURL,
+		RequestTimeout:       a.cfg.RequestTimeout.String(),
+		ContinuationTTL:      a.cfg.ContinuationTTL.String(),
+		TokenOptimization:    a.cfg.TokenOptimization.Enabled,
+		CompressorConfigured: a.cfg.TokenOptimization.CompressorURL != "",
+		AutoCompactThreshold: a.cfg.TokenOptimization.AutoCompactThreshold,
 	})
 }

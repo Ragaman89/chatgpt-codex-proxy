@@ -1,0 +1,33 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: codex-proxy-http
+  namespace: codex-proxy
+spec:
+  entryPoints: [web]
+  routes:
+    - kind: Rule
+      match: Host(`codex-api.laegerfeld.de`)
+      middlewares:
+        - name: redirect-to-https
+          namespace: traefik
+      services:
+        - name: noop
+          port: 9999
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: codex-proxy-https
+  namespace: codex-proxy
+spec:
+  entryPoints: [websecure]
+  routes:
+    - kind: Rule
+      match: Host(`codex-api.laegerfeld.de`)
+      services:
+        - name: codex-proxy
+          port: 8080
+  tls:
+    store:
+      name: default

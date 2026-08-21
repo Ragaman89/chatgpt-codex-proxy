@@ -19,6 +19,7 @@ import (
 	"chatgpt-codex-proxy/internal/devicelogin"
 	"chatgpt-codex-proxy/internal/middleware"
 	"chatgpt-codex-proxy/internal/models"
+	"chatgpt-codex-proxy/internal/tokenopt"
 	"chatgpt-codex-proxy/internal/turn"
 )
 
@@ -38,6 +39,7 @@ type App struct {
 	continuations   *conversation.ContinuationManager
 	claudeReplays   *anthropic.ReplayManager
 	models          *models.Catalog
+	tokenOptimizer  *tokenopt.Optimizer
 	cancel          context.CancelFunc
 }
 
@@ -60,6 +62,10 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	accountMgr := accountmanager.NewAccountManager(cfg, accountsSvc, oauthSvc, httpClient, modelCatalog.SupportsRecord)
 	deviceLogins := devicelogin.NewDeviceLoginService(oauthSvc, accountsSvc, cfg.LoginTimeout)
 	modelRefresher := models.NewFetcher(cfg, logger, accountsSvc, accountMgr, httpClient, modelCatalog)
+	tokenOptimizer, err := tokenopt.New(cfg.TokenOptimization)
+	if err != nil {
+		return nil, err
+	}
 
 	engine := gin.New()
 	engine.SetTrustedProxies(nil)
@@ -68,16 +74,17 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	engine.Use(middleware.Recovery(logger))
 
 	app := &App{
-		cfg:           cfg,
-		logger:        logger,
-		engine:        engine,
-		accounts:      accountsSvc,
-		deviceLogins:  deviceLogins,
-		accountMgr:    accountMgr,
-		httpClient:    httpClient,
-		continuations: conversation.NewContinuationManager(cfg.ContinuationTTL),
-		claudeReplays: anthropic.NewReplayManager(cfg.ContinuationTTL),
-		models:        modelCatalog,
+		cfg:            cfg,
+		logger:         logger,
+		engine:         engine,
+		accounts:       accountsSvc,
+		deviceLogins:   deviceLogins,
+		accountMgr:     accountMgr,
+		httpClient:     httpClient,
+		continuations:  conversation.NewContinuationManager(cfg.ContinuationTTL),
+		claudeReplays:  anthropic.NewReplayManager(cfg.ContinuationTTL),
+		models:         modelCatalog,
+		tokenOptimizer: tokenOptimizer,
 	}
 	app.routes()
 

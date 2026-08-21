@@ -3,14 +3,19 @@ package turn
 import "encoding/json"
 
 type ContentPart struct {
-	Type     string `json:"type"`
-	Text     string `json:"text,omitempty"`
-	ImageURL string `json:"image_url,omitempty"`
-	Detail   string `json:"detail,omitempty"`
-	FileURL  string `json:"file_url,omitempty"`
-	FileData string `json:"file_data,omitempty"`
-	FileID   string `json:"file_id,omitempty"`
-	Filename string `json:"filename,omitempty"`
+	Type                  string                 `json:"type"`
+	Text                  string                 `json:"text,omitempty"`
+	ImageURL              string                 `json:"image_url,omitempty"`
+	Detail                string                 `json:"detail,omitempty"`
+	FileURL               string                 `json:"file_url,omitempty"`
+	FileData              string                 `json:"file_data,omitempty"`
+	FileID                string                 `json:"file_id,omitempty"`
+	Filename              string                 `json:"filename,omitempty"`
+	PromptCacheBreakpoint *PromptCacheBreakpoint `json:"prompt_cache_breakpoint,omitempty"`
+}
+
+type PromptCacheBreakpoint struct {
+	Mode string `json:"mode"`
 }
 
 type ReasoningPart struct {

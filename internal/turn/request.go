@@ -6,28 +6,42 @@ import (
 )
 
 type Request struct {
-	Model              string           `json:"model"`
-	Instructions       string           `json:"instructions"`
-	Input              []InputItem      `json:"input"`
-	Stream             bool             `json:"stream"`
-	Store              bool             `json:"store"`
-	Tools              []ToolDefinition `json:"tools,omitempty"`
-	ToolChoice         json.RawMessage  `json:"tool_choice,omitempty"`
-	Text               *TextConfig      `json:"text,omitempty"`
-	Reasoning          *Reasoning       `json:"reasoning,omitempty"`
-	ServiceTier        string           `json:"service_tier,omitempty"`
-	PreviousResponseID string           `json:"previous_response_id,omitempty"`
-	PromptCacheKey     string           `json:"prompt_cache_key,omitempty"`
-	Include            []string         `json:"include,omitempty"`
-	ParallelToolCalls  *bool            `json:"parallel_tool_calls,omitempty"`
+	Model              string              `json:"model"`
+	Instructions       string              `json:"instructions"`
+	Input              []InputItem         `json:"input"`
+	Stream             bool                `json:"stream"`
+	Store              bool                `json:"store"`
+	Tools              []ToolDefinition    `json:"tools,omitempty"`
+	ToolChoice         json.RawMessage     `json:"tool_choice,omitempty"`
+	Text               *TextConfig         `json:"text,omitempty"`
+	Reasoning          *Reasoning          `json:"reasoning,omitempty"`
+	ServiceTier        string              `json:"service_tier,omitempty"`
+	PreviousResponseID string              `json:"previous_response_id,omitempty"`
+	PromptCacheKey     string              `json:"prompt_cache_key,omitempty"`
+	PromptCacheOptions *PromptCacheOptions `json:"prompt_cache_options,omitempty"`
+	Include            []string            `json:"include,omitempty"`
+	ParallelToolCalls  *bool               `json:"parallel_tool_calls,omitempty"`
+	ContextManagement  []ContextManagement `json:"context_management,omitempty"`
+}
+
+type ContextManagement struct {
+	Type             string `json:"type"`
+	CompactThreshold int    `json:"compact_threshold,omitempty"`
+}
+
+type PromptCacheOptions struct {
+	Mode string `json:"mode,omitempty"`
+	TTL  string `json:"ttl,omitempty"`
 }
 
 type CompactRequest struct {
-	Model        string      `json:"model"`
-	Instructions string      `json:"instructions"`
-	Input        []InputItem `json:"input"`
-	Text         *TextConfig `json:"text,omitempty"`
-	Reasoning    *Reasoning  `json:"reasoning,omitempty"`
+	Model              string              `json:"model"`
+	Instructions       string              `json:"instructions"`
+	Input              []InputItem         `json:"input"`
+	Text               *TextConfig         `json:"text,omitempty"`
+	Reasoning          *Reasoning          `json:"reasoning,omitempty"`
+	PromptCacheKey     string              `json:"prompt_cache_key,omitempty"`
+	PromptCacheOptions *PromptCacheOptions `json:"prompt_cache_options,omitempty"`
 }
 
 type TextConfig struct {
