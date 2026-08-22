@@ -210,8 +210,9 @@ The hostname is internal-only. No database is required, so CNPG variables and
 migrations do not apply. OAuth account data resides only on the encrypted
 Longhorn-backed volume.
 
-Rollback is an image-tag change followed by `kubectl rollout undo deployment/codex-proxy
--n codex-proxy`. Disabling `TOKEN_OPTIMIZATION_ENABLED` rolls back only the new
+Rollback is an image-tag change followed by
+`kubectl rollout undo deployment/codex-proxy -n codex-proxy`. Disabling
+`TOKEN_OPTIMIZATION_ENABLED` rolls back only the new
 optimization stage without affecting API compatibility. Deleting the compressor
 Deployment is also safe because compression is fail-open.
 
@@ -267,6 +268,10 @@ python3 -m compileall -q compressor
 kubectl kustomize k8s >/dev/null
 ```
 
+`compressor.test_model_integration` covers real German and English inference.
+It runs automatically while building `Dockerfile.compressor` and skips in a
+source-only checkout where the embedded model is not present.
+
 Live tests, against a proxy you already have running:
 
 ```bash
@@ -283,6 +288,7 @@ go test -tags=live ./test/integration -v -count=1
 - [docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md](docs/MULTI_ACCOUNT_ROTATION_STRATEGY.md) — account selection and quota routing
 - [docs/CODEX_API_DOCS.md](docs/CODEX_API_DOCS.md) — private upstream behavior, inferred from this codebase
 - [docs/TOKEN_EFFICIENCY.md](docs/TOKEN_EFFICIENCY.md) — layered token optimization and operational guidance
+- [docs/UPSTREAM_ANALYSIS.md](docs/UPSTREAM_ANALYSIS.md) — analyzed upstream architecture, inherited savings, and fork risks
 
 ## Limitations
 

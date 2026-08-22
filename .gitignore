@@ -30,3 +30,7 @@ tmp*
 .gocache*
 .codex*
 .claude*
+
+# Python bytecode
+__pycache__/
+*.py[cod]

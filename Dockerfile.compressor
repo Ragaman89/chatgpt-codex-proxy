@@ -35,6 +35,9 @@ RUN for attempt in 1 2 3 4 5; do \
 
 COPY --chown=65532:65532 compressor /app/compressor
 
+# Exercise the actual embedded model for both supported household languages.
+RUN PYTHONPATH=/app python -m unittest compressor.test_model_integration
+
 USER 65532:65532
 EXPOSE 8090
 ENTRYPOINT ["python", "-m", "compressor.app"]
