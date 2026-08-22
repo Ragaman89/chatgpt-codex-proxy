@@ -32,7 +32,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          image: registry.laegerfeld.de/chatgpt-codex-proxy:v0.1.0
+          image: registry.laegerfeld.de/chatgpt-codex-proxy:v0.1.1
           imagePullPolicy: IfNotPresent
           env:
             - name: PORT
@@ -141,7 +141,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: compressor
-          image: registry.laegerfeld.de/chatgpt-codex-compressor:v0.1.0
+          image: registry.laegerfeld.de/chatgpt-codex-compressor:v0.1.1
           imagePullPolicy: IfNotPresent
           env:
             - name: PORT
@@ -150,6 +150,8 @@ spec:
               value: /models/llmlingua-2-bert-base-multilingual-cased-meetingbank
             - name: HF_HUB_OFFLINE
               value: "1"
+            - name: TIKTOKEN_CACHE_DIR
+              value: /models/tiktoken
             - name: TRANSFORMERS_OFFLINE
               value: "1"
           ports:

@@ -10,6 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     HF_HOME=/models/cache \
     HF_HUB_DISABLE_TELEMETRY=1 \
+    TIKTOKEN_CACHE_DIR=/models/tiktoken \
     MODEL_NAME=/models/llmlingua-2-bert-base-multilingual-cased-meetingbank \
     PORT=8090
 
@@ -26,6 +27,8 @@ RUN for attempt in 1 2 3 4 5; do \
       if [ "$attempt" = 5 ]; then exit 1; fi; \
       sleep $((attempt * 10)); \
     done && \
+    mkdir -p "${TIKTOKEN_CACHE_DIR}" && \
+    python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')" && \
     find /models -type f -exec chmod 0444 {} + && \
     find /models -type d -exec chmod 0555 {} + && \
     rm -rf /root/.cache /tmp/*
