@@ -77,6 +77,11 @@ spec:
         - {protocol: TCP, port: 8090}
     - to:
         - ipBlock:
+            cidr: 192.168.70.240/32
+      ports:
+        - {protocol: TCP, port: 1883}
+    - to:
+        - ipBlock:
             cidr: 0.0.0.0/0
             except:
               - 10.0.0.0/8

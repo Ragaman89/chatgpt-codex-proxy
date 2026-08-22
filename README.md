@@ -33,6 +33,7 @@ Built for local and small-scale use.
 - **Device login** — add an account by opening a URL. No cookie scraping, no pasted tokens.
 - **Tools and structured output** — custom tools, legacy `functions`, `json_schema`, `json_object`.
 - **Layered token efficiency** — native prompt caching and continuations, server compaction, exact compression-result caching, and optional LLMLingua-2 compression for safe historical prose.
+- **Home Assistant operations view** — retained MQTT Discovery entities expose the weekly Codex allowance, banked full resets and live compressor readiness without leaking account credentials.
 
 ## Token efficiency
 
@@ -184,6 +185,41 @@ PROXY_API_KEY=change-me-to-a-long-random-string \
 go run ./cmd/api
 ```
 
+### Home Assistant reporting
+
+When `HA_MQTT_BROKER` is set, the gateway publishes retained MQTT Discovery
+configuration and state for one active Codex account. It refreshes immediately
+at startup and then every `HA_STATUS_INTERVAL` (default `15m`). The published
+entities are:
+
+| Entity | State | Important attributes |
+| --- | --- | --- |
+| `sensor.codex_wochenlimit` | Remaining share of the weekly window in percent | Used share, regular reset time, window size, freshness and fetch time |
+| `sensor.codex_limit_resets` | Number of available banked full resets | Expiration times, next expiration and whether all detail rows were returned |
+| `binary_sensor.codex_kompression_aktiv` | `on` only when compression is configured and `/readyz` responds | Configuration, compressor reachability, minimum request size and target ratio |
+
+The available reset count from the usage response is authoritative. The
+upstream detail endpoint can omit or cap individual rows, so
+`details_complete=false` explicitly marks an incomplete expiration list. A
+failed quota refresh falls back to the last cached snapshot and sets
+`fresh=false`. Compression is reported inactive while the temporary compressor
+node is intentionally offline; requests still pass through unchanged.
+
+Configuration:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `HA_MQTT_BROKER` | disabled | Broker URL, for example `tcp://mqtt:1883` |
+| `HA_MQTT_USERNAME` / `HA_MQTT_PASSWORD` | empty | MQTT credentials |
+| `HA_MQTT_CLIENT_ID` | `codex-proxy-home-assistant` | Stable MQTT session ID |
+| `HA_MQTT_BASE_TOPIC` | `codex-proxy/home-assistant` | Retained state and availability root |
+| `HA_MQTT_DISCOVERY_PREFIX` | `homeassistant` | Home Assistant discovery prefix |
+| `HA_STATUS_INTERVAL` | `15m` | Quota and readiness refresh interval |
+
+Only aggregate percentages, reset counts/expiration times and compression
+status are published. OAuth tokens, proxy keys, account IDs, email addresses,
+reset-credit IDs and prompt contents are never included.
+
 ## Kubernetes deployment
 
 The manifests in `k8s/` deploy the gateway on an always-on arm64 node and the
@@ -196,6 +232,10 @@ NetworkPolicies. Traefik exposes only `https://codex-api.laegerfeld.de` and the
 ```bash
 kubectl -n codex-proxy create secret generic codex-proxy \
   --from-literal=proxy-api-key="$(openssl rand -hex 32)"
+kubectl -n codex-proxy create secret generic codex-proxy-mqtt \
+  --from-literal=broker='tcp://mqtt.example.internal:1883' \
+  --from-literal=username='<mqtt-user>' \
+  --from-literal=password='<mqtt-password>'
 kubectl apply -k k8s/
 ```
 

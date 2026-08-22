@@ -25,6 +25,19 @@ type Config struct {
 	RequestTimeout    time.Duration
 	RefreshSkew       time.Duration
 	TokenOptimization TokenOptimizationConfig
+	HomeAssistant     HomeAssistantConfig
+}
+
+// HomeAssistantConfig controls the optional MQTT Discovery publisher. The
+// publisher is disabled unless MQTTBroker is configured.
+type HomeAssistantConfig struct {
+	MQTTBroker      string
+	MQTTUsername    string
+	MQTTPassword    string
+	MQTTClientID    string
+	MQTTBaseTopic   string
+	DiscoveryPrefix string
+	PublishInterval time.Duration
 }
 
 // TokenOptimizationConfig controls optional, semantics-preserving prompt
@@ -95,6 +108,12 @@ func Load() (Config, error) {
 			TargetRatio:       0.5,
 			CacheEntries:      256,
 		},
+		HomeAssistant: HomeAssistantConfig{
+			MQTTClientID:    "codex-proxy-home-assistant",
+			MQTTBaseTopic:   "codex-proxy/home-assistant",
+			DiscoveryPrefix: "homeassistant",
+			PublishInterval: 15 * time.Minute,
+		},
 	}
 
 	if cfg.TokenOptimization.Enabled, err = envBool("TOKEN_OPTIMIZATION_ENABLED", false); err != nil {
@@ -117,6 +136,22 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.TokenOptimization.AutoCompactThreshold, err = envInt("TOKEN_AUTO_COMPACT_THRESHOLD", 0, 0); err != nil {
+		return Config{}, err
+	}
+
+	cfg.HomeAssistant.MQTTBroker = strings.TrimSpace(os.Getenv("HA_MQTT_BROKER"))
+	cfg.HomeAssistant.MQTTUsername = strings.TrimSpace(os.Getenv("HA_MQTT_USERNAME"))
+	cfg.HomeAssistant.MQTTPassword = strings.TrimSpace(os.Getenv("HA_MQTT_PASSWORD"))
+	if value := strings.TrimSpace(os.Getenv("HA_MQTT_CLIENT_ID")); value != "" {
+		cfg.HomeAssistant.MQTTClientID = value
+	}
+	if value := strings.Trim(strings.TrimSpace(os.Getenv("HA_MQTT_BASE_TOPIC")), "/"); value != "" {
+		cfg.HomeAssistant.MQTTBaseTopic = value
+	}
+	if value := strings.Trim(strings.TrimSpace(os.Getenv("HA_MQTT_DISCOVERY_PREFIX")), "/"); value != "" {
+		cfg.HomeAssistant.DiscoveryPrefix = value
+	}
+	if cfg.HomeAssistant.PublishInterval, err = envDuration("HA_STATUS_INTERVAL", cfg.HomeAssistant.PublishInterval); err != nil {
 		return Config{}, err
 	}
 

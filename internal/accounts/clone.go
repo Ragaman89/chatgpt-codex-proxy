@@ -34,6 +34,10 @@ func cloneQuotaSnapshot(snapshot *QuotaSnapshot) QuotaSnapshot {
 		}
 		cloned.Credits = &credits
 	}
+	if snapshot.RateLimitResetCredits != nil {
+		resetCredits := *snapshot.RateLimitResetCredits
+		cloned.RateLimitResetCredits = &resetCredits
+	}
 	return cloned
 }
 

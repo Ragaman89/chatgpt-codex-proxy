@@ -3,6 +3,7 @@ package config
 import (
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLoadRequiresProxyAPIKey(t *testing.T) {
@@ -114,5 +115,25 @@ func TestLoadParsesDebugLogPayloads(t *testing.T) {
 				t.Fatalf("Load() debug log payloads = %v, want %v", cfg.DebugLogPayloads, tc.wantDebug)
 			}
 		})
+	}
+}
+
+func TestLoadParsesHomeAssistantMQTT(t *testing.T) {
+	t.Setenv("PROXY_API_KEY", "test-key")
+	t.Setenv("HA_MQTT_BROKER", "tcp://mqtt.example:1883")
+	t.Setenv("HA_MQTT_USERNAME", "codex")
+	t.Setenv("HA_MQTT_PASSWORD", "secret")
+	t.Setenv("HA_STATUS_INTERVAL", "5m")
+	t.Chdir(t.TempDir())
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.HomeAssistant.MQTTBroker != "tcp://mqtt.example:1883" {
+		t.Fatalf("MQTT broker = %q", cfg.HomeAssistant.MQTTBroker)
+	}
+	if cfg.HomeAssistant.PublishInterval != 5*time.Minute {
+		t.Fatalf("publish interval = %v, want 5m", cfg.HomeAssistant.PublishInterval)
 	}
 }

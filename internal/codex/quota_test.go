@@ -168,3 +168,39 @@ func TestQuotaFromUsageResponseIncludesCodeReviewRateLimit(t *testing.T) {
 		t.Fatal("expected code review limit_reached")
 	}
 }
+
+func TestUsageResponseAcceptsStringCreditsAndResetCount(t *testing.T) {
+	t.Parallel()
+
+	var payload UsageResponse
+	err := json.Unmarshal([]byte(`{
+		"credits":{"has_credits":true,"unlimited":false,"balance":"185.4743","active_limit":"premium"},
+		"rate_limit_reset_credits":{"available_count":2}
+	}`), &payload)
+	if err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if payload.Credits == nil || payload.Credits.Balance == nil || *payload.Credits.Balance != 185.4743 {
+		t.Fatalf("credits balance = %#v, want 185.4743", payload.Credits)
+	}
+	if payload.RateLimitResetCredits == nil || payload.RateLimitResetCredits.AvailableCount != 2 {
+		t.Fatalf("reset credits = %#v, want 2", payload.RateLimitResetCredits)
+	}
+
+	snapshot := QuotaFromUsageResponse(payload)
+	if snapshot.RateLimitResetCredits == nil || snapshot.RateLimitResetCredits.AvailableCount != 2 {
+		t.Fatalf("snapshot reset credits = %#v, want 2", snapshot.RateLimitResetCredits)
+	}
+}
+
+func TestUsageResponseAcceptsNumericCredits(t *testing.T) {
+	t.Parallel()
+
+	var payload UsageResponse
+	if err := json.Unmarshal([]byte(`{"credits":{"balance":19.5}}`), &payload); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if payload.Credits == nil || payload.Credits.Balance == nil || *payload.Credits.Balance != 19.5 {
+		t.Fatalf("credits balance = %#v, want 19.5", payload.Credits)
+	}
+}
