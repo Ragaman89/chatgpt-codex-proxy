@@ -76,6 +76,40 @@ func (c *HTTPClient) GetUsage(ctx context.Context, record accounts.Record) (Usag
 	return decoded, QuotaFromUsageResponse(decoded), nil
 }
 
+// GetResetCredits retrieves the optional per-credit expiry details. The normal
+// usage endpoint remains authoritative for the available count because the
+// details response may be capped or temporarily unavailable.
+func (c *HTTPClient) GetResetCredits(ctx context.Context, record accounts.Record) (ResetCreditsResponse, error) {
+	session := c.sessionFor(record.ID)
+	headers := BuildHeaders(record.Token.AccessToken, HeaderOptions{
+		AccountID:      record.AccountID,
+		Cookies:        record.Cookies,
+		RequestID:      NewRequestID(),
+		Accept:         "application/json",
+		AcceptEncoding: "gzip, deflate",
+	})
+
+	resp, err := session.Get(ctx, JoinURL(c.cfg.CodexBaseURL, "/wham/rate-limit-reset-credits"), headers)
+	if err != nil {
+		return ResetCreditsResponse{}, err
+	}
+	defer resp.Close()
+
+	payload, err := resp.Text()
+	if err != nil {
+		return ResetCreditsResponse{}, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return ResetCreditsResponse{}, NewUpstreamError("reset credits", resp.StatusCode, payload, CanonicalHeader(resp.Headers))
+	}
+
+	var decoded ResetCreditsResponse
+	if err := json.Unmarshal([]byte(payload), &decoded); err != nil {
+		return ResetCreditsResponse{}, fmt.Errorf("decode reset credits: %w", err)
+	}
+	return decoded, nil
+}
+
 func (c *HTTPClient) GetCodexModels(ctx context.Context, record accounts.Record) ([]BackendModelEntry, error) {
 	session := c.sessionFor(record.ID)
 	headers := BuildHeaders(record.Token.AccessToken, HeaderOptions{

@@ -57,6 +57,11 @@ func QuotaFromUsageResponse(payload UsageResponse) *accounts.QuotaSnapshot {
 	if payload.Credits != nil {
 		snapshot.Credits = parseCreditsFromUsage(payload.Credits)
 	}
+	if payload.RateLimitResetCredits != nil {
+		snapshot.RateLimitResetCredits = &accounts.RateLimitResetCreditsSummary{
+			AvailableCount: max(payload.RateLimitResetCredits.AvailableCount, 0),
+		}
+	}
 	return snapshot
 }
 

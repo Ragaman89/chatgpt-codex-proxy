@@ -17,6 +17,7 @@ import (
 	"chatgpt-codex-proxy/internal/config"
 	"chatgpt-codex-proxy/internal/conversation"
 	"chatgpt-codex-proxy/internal/devicelogin"
+	"chatgpt-codex-proxy/internal/hastatus"
 	"chatgpt-codex-proxy/internal/middleware"
 	"chatgpt-codex-proxy/internal/models"
 	"chatgpt-codex-proxy/internal/tokenopt"
@@ -40,6 +41,7 @@ type App struct {
 	claudeReplays   *anthropic.ReplayManager
 	models          *models.Catalog
 	tokenOptimizer  *tokenopt.Optimizer
+	haPublisher     *hastatus.Publisher
 	cancel          context.CancelFunc
 }
 
@@ -90,6 +92,11 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	app.cancel = cancel
+	if cfg.HomeAssistant.MQTTBroker != "" {
+		source := hastatus.NewSource(cfg, logger, accountsSvc, accountMgr, httpClient)
+		app.haPublisher = hastatus.NewPublisher(cfg.HomeAssistant, source, logger)
+		go app.haPublisher.Run(ctx)
+	}
 	go app.housekeeping(ctx)
 	go modelRefresher.Run(ctx)
 

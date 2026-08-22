@@ -32,14 +32,19 @@ type CreditsSnapshot struct {
 	ActiveLimit string   `json:"active_limit,omitempty"`
 }
 
+type RateLimitResetCreditsSummary struct {
+	AvailableCount int `json:"available_count"`
+}
+
 type QuotaSnapshot struct {
-	PlanType            string           `json:"plan_type"`
-	RateLimit           RateLimitWindow  `json:"rate_limit"`
-	SecondaryRateLimit  *RateLimitWindow `json:"secondary_rate_limit,omitempty"`
-	CodeReviewRateLimit *RateLimitWindow `json:"code_review_rate_limit,omitempty"`
-	Credits             *CreditsSnapshot `json:"credits,omitempty"`
-	Source              string           `json:"source"`
-	FetchedAt           time.Time        `json:"fetched_at"`
+	PlanType              string                        `json:"plan_type"`
+	RateLimit             RateLimitWindow               `json:"rate_limit"`
+	SecondaryRateLimit    *RateLimitWindow              `json:"secondary_rate_limit,omitempty"`
+	CodeReviewRateLimit   *RateLimitWindow              `json:"code_review_rate_limit,omitempty"`
+	Credits               *CreditsSnapshot              `json:"credits,omitempty"`
+	RateLimitResetCredits *RateLimitResetCreditsSummary `json:"rate_limit_reset_credits,omitempty"`
+	Source                string                        `json:"source"`
+	FetchedAt             time.Time                     `json:"fetched_at"`
 }
 
 type Record struct {
