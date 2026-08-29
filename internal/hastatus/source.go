@@ -13,9 +13,17 @@ import (
 	"chatgpt-codex-proxy/internal/config"
 )
 
-const weeklyWindowMinimum = 6 * 24 * time.Hour
+const (
+	fiveHourWindowDuration = 5 * time.Hour
+	weeklyWindowMinimum    = 6 * 24 * time.Hour
+)
 
 type State struct {
+	FiveHourRemainingPercent *float64   `json:"five_hour_remaining_percent"`
+	FiveHourUsedPercent      *float64   `json:"five_hour_used_percent"`
+	FiveHourResetAt          *time.Time `json:"five_hour_reset_at"`
+	FiveHourWindowSeconds    *int       `json:"five_hour_window_seconds"`
+
 	WeeklyRemainingPercent *float64   `json:"weekly_remaining_percent"`
 	WeeklyUsedPercent      *float64   `json:"weekly_used_percent"`
 	WeeklyResetAt          *time.Time `json:"weekly_reset_at"`
@@ -93,10 +101,19 @@ func (s *Source) Snapshot(ctx context.Context) State {
 	if !fetchedAt.IsZero() {
 		state.QuotaFetchedAt = &fetchedAt
 	}
+	if window := fiveHourWindow(quota); window != nil {
+		state.FiveHourUsedPercent = cloneFloat(window.UsedPercent)
+		if window.UsedPercent != nil {
+			remaining := remainingPercent(*window.UsedPercent)
+			state.FiveHourRemainingPercent = &remaining
+		}
+		state.FiveHourResetAt = cloneTime(window.ResetAt)
+		state.FiveHourWindowSeconds = cloneInt(window.LimitWindowSeconds)
+	}
 	if window := weeklyWindow(quota); window != nil {
 		state.WeeklyUsedPercent = cloneFloat(window.UsedPercent)
 		if window.UsedPercent != nil {
-			remaining := min(max(100-*window.UsedPercent, 0), 100)
+			remaining := remainingPercent(*window.UsedPercent)
 			state.WeeklyRemainingPercent = &remaining
 		}
 		state.WeeklyResetAt = cloneTime(window.ResetAt)
@@ -133,6 +150,22 @@ func (s *Source) Snapshot(ctx context.Context) State {
 	return state
 }
 
+func fiveHourWindow(quota *accounts.QuotaSnapshot) *accounts.RateLimitWindow {
+	if quota == nil {
+		return nil
+	}
+	for _, candidate := range rateLimitWindows(quota) {
+		if candidate.LimitWindowSeconds == nil {
+			continue
+		}
+		windowDuration := time.Duration(*candidate.LimitWindowSeconds) * time.Second
+		if windowDuration == fiveHourWindowDuration {
+			return candidate
+		}
+	}
+	return nil
+}
+
 func (s *Source) compressorReachable(ctx context.Context) bool {
 	if !s.cfg.TokenOptimization.Enabled || s.cfg.TokenOptimization.CompressorURL == "" {
 		return false
@@ -162,10 +195,9 @@ func weeklyWindow(quota *accounts.QuotaSnapshot) *accounts.RateLimitWindow {
 	if quota == nil {
 		return nil
 	}
-	candidates := []*accounts.RateLimitWindow{&quota.RateLimit, quota.SecondaryRateLimit}
 	var longest *accounts.RateLimitWindow
-	for _, candidate := range candidates {
-		if candidate == nil || candidate.LimitWindowSeconds == nil {
+	for _, candidate := range rateLimitWindows(quota) {
+		if candidate.LimitWindowSeconds == nil {
 			continue
 		}
 		if time.Duration(*candidate.LimitWindowSeconds)*time.Second >= weeklyWindowMinimum {
@@ -176,6 +208,18 @@ func weeklyWindow(quota *accounts.QuotaSnapshot) *accounts.RateLimitWindow {
 		}
 	}
 	return longest
+}
+
+func rateLimitWindows(quota *accounts.QuotaSnapshot) []*accounts.RateLimitWindow {
+	windows := []*accounts.RateLimitWindow{&quota.RateLimit}
+	if quota.SecondaryRateLimit != nil {
+		windows = append(windows, quota.SecondaryRateLimit)
+	}
+	return windows
+}
+
+func remainingPercent(usedPercent float64) float64 {
+	return min(max(100-usedPercent, 0), 100)
 }
 
 func cloneFloat(value *float64) *float64 {

@@ -124,6 +124,7 @@ func (p *Publisher) publishSnapshot(ctx context.Context) {
 		return
 	}
 	p.logger.Info("Home Assistant status published",
+		"five_hour_remaining_percent", state.FiveHourRemainingPercent,
 		"weekly_remaining_percent", state.WeeklyRemainingPercent,
 		"available_reset_count", state.AvailableResetCount,
 		"compression_active", state.CompressionActive,
@@ -143,6 +144,13 @@ func (p *Publisher) publishDiscovery() error {
 		objectID  string
 		config    discoveryConfig
 	}{
+		{component: "sensor", objectID: "codex_5_stunden_limit", config: discoveryConfig{
+			Name: "Codex 5-Stunden-Limit", UniqueID: "codex_five_hour_limit_remaining", DefaultEntityID: "sensor.codex_5_stunden_limit", ObjectID: "codex_5_stunden_limit",
+			StateTopic: p.stateTopic(), ValueTemplate: "{{ value_json.five_hour_remaining_percent }}",
+			JSONAttributesTopic: p.stateTopic(), JSONAttributesTemplate: "{{ {'used_percent': value_json.five_hour_used_percent, 'reset_at': value_json.five_hour_reset_at, 'window_seconds': value_json.five_hour_window_seconds, 'fresh': value_json.quota_fresh, 'fetched_at': value_json.quota_fetched_at, 'updated_at': value_json.updated_at} | tojson }}",
+			UnitOfMeasurement: "%", StateClass: "measurement", Icon: "mdi:timer-sand", EntityCategory: "diagnostic", Device: device,
+			Availability: p.dataAvailability("five_hour_remaining_percent"), AvailabilityMode: "all",
+		}},
 		{component: "sensor", objectID: "codex_wochenlimit", config: discoveryConfig{
 			Name: "Codex Wochenlimit", UniqueID: "codex_weekly_limit_remaining", DefaultEntityID: "sensor.codex_wochenlimit", ObjectID: "codex_wochenlimit",
 			StateTopic: p.stateTopic(), ValueTemplate: "{{ value_json.weekly_remaining_percent }}",
