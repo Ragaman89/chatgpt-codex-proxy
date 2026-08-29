@@ -33,7 +33,7 @@ Built for local and small-scale use.
 - **Device login** — add an account by opening a URL. No cookie scraping, no pasted tokens.
 - **Tools and structured output** — custom tools, legacy `functions`, `json_schema`, `json_object`.
 - **Layered token efficiency** — native prompt caching and continuations, server compaction, exact compression-result caching, and optional LLMLingua-2 compression for safe historical prose.
-- **Home Assistant operations view** — retained MQTT Discovery entities expose the weekly Codex allowance, banked full resets and live compressor readiness without leaking account credentials.
+- **Home Assistant operations view** — retained MQTT Discovery entities expose the 5-hour and weekly Codex allowances, banked full resets and live compressor readiness without leaking account credentials.
 
 ## Token efficiency
 
@@ -194,6 +194,7 @@ entities are:
 
 | Entity | State | Important attributes |
 | --- | --- | --- |
+| `sensor.codex_5_stunden_limit` | Remaining share of the 5-hour window in percent | Used share, regular reset time, window size, freshness and fetch time |
 | `sensor.codex_wochenlimit` | Remaining share of the weekly window in percent | Used share, regular reset time, window size, freshness and fetch time |
 | `sensor.codex_limit_resets` | Number of available banked full resets | Expiration times, next expiration and whether all detail rows were returned |
 | `binary_sensor.codex_kompression_aktiv` | `on` only when compression is configured and `/readyz` responds | Configuration, compressor reachability, minimum request size and target ratio |
