@@ -39,6 +39,11 @@ func TestOptimizeOnlyCompressesSafeHistoricalTextAndCaches(t *testing.T) {
 	request := turn.NormalizedRequest{Request: turn.Request{
 		Input: []turn.InputItem{
 			{Role: "developer", Content: []turn.ContentPart{{Type: "input_text", Text: longText}}},
+			{Role: "user", Content: []turn.ContentPart{{
+				Type:                  "input_text",
+				Text:                  longText,
+				PromptCacheBreakpoint: &turn.PromptCacheBreakpoint{Mode: "explicit"},
+			}}},
 			{Role: "user", Content: []turn.ContentPart{{Type: "input_text", Text: longText}}},
 			{Role: "assistant", Content: []turn.ContentPart{{Type: "output_text", Text: longText}}},
 			{Role: "assistant", Content: []turn.ContentPart{{Type: "output_text", Text: "```go\nfunc main() {}\n```"}}},
@@ -54,19 +59,22 @@ func TestOptimizeOnlyCompressesSafeHistoricalTextAndCaches(t *testing.T) {
 	if got := optimized.Input[0].Content[0].Text; got != longText {
 		t.Fatalf("developer text changed: %q", got)
 	}
-	if got := optimized.Input[1].Content[0].Text; got != "condensed context" {
-		t.Fatalf("old user text = %q", got)
+	if got := optimized.Input[1].Content[0].Text; got != longText {
+		t.Fatalf("explicit cache prefix changed: %q", got)
 	}
 	if got := optimized.Input[2].Content[0].Text; got != "condensed context" {
+		t.Fatalf("old user text = %q", got)
+	}
+	if got := optimized.Input[3].Content[0].Text; got != "condensed context" {
 		t.Fatalf("old assistant text = %q", got)
 	}
-	if got := optimized.Input[3].Content[0].Text; got != "```go\nfunc main() {}\n```" {
+	if got := optimized.Input[4].Content[0].Text; got != "```go\nfunc main() {}\n```" {
 		t.Fatalf("code changed: %q", got)
 	}
-	if got := optimized.Input[4].OutputText; got != longText {
+	if got := optimized.Input[5].OutputText; got != longText {
 		t.Fatalf("tool output changed: %q", got)
 	}
-	if got := optimized.Input[5].Content[0].Text; got != latest {
+	if got := optimized.Input[6].Content[0].Text; got != latest {
 		t.Fatalf("latest question changed: %q", got)
 	}
 	if len(optimized.ContextManagement) != 1 || optimized.ContextManagement[0].CompactThreshold != 10000 {
