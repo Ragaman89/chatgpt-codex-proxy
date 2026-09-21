@@ -7,7 +7,9 @@ metadata:
     app.kubernetes.io/name: codex-proxy
     app.kubernetes.io/component: gateway
 spec:
-  replicas: 1
+  # Retired by the quota-aware codex-orchestrator. Kept at zero for one
+  # rollback window so the OAuth PVC remains recoverable.
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -139,7 +141,8 @@ metadata:
     app.kubernetes.io/component: compressor
     temporary: "true"
 spec:
-  replicas: 1
+  # The traffic proxy is retired, therefore its optional compressor is idle.
+  replicas: 0
   strategy:
     type: Recreate
   selector:
